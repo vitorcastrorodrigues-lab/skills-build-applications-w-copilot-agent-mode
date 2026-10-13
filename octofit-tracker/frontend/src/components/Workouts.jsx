@@ -1,31 +1,36 @@
 import { useEffect, useState } from 'react';
+import { extractCollection } from './collection.js';
 
 function Workouts({ apiBaseUrl }) {
   const [workouts, setWorkouts] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchWorkouts = async () => {
-      try {
-        const response = await fetch(`${apiBaseUrl}/api/workouts/`);
-        if (!response.ok) {
-          throw new Error('Unable to load workouts');
-        }
+    const controller = new AbortController();
 
-        const data = await response.json();
-        setWorkouts(Array.isArray(data.workouts) ? data.workouts : []);
+    async function fetchWorkouts() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/workouts/`, { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error(`Unable to load workouts (HTTP ${response.status}).`);
+        }
+        setWorkouts(extractCollection(await response.json(), 'workouts'));
       } catch (loadError) {
-        setError(loadError.message);
+        if (!controller.signal.aborted) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load workouts.');
+        }
       }
-    };
+    }
 
     fetchWorkouts();
+    return () => controller.abort();
   }, [apiBaseUrl]);
 
   return (
     <div className="container py-4">
       <h2 className="mb-3">Recommended Workouts</h2>
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
+      {!error && workouts.length === 0 ? <p className="text-muted">No workouts found.</p> : null}
       <div className="row g-3">
         {workouts.map((workout) => (
           <div className="col-md-6 col-xl-4" key={workout._id ?? workout.name}>

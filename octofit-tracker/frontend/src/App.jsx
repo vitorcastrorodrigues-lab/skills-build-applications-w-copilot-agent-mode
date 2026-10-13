@@ -1,14 +1,19 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
-import Users from './Users.jsx';
-import Teams from './Teams.jsx';
-import Activities from './Activities.jsx';
-import Leaderboard from './Leaderboard.jsx';
-import Workouts from './Workouts.jsx';
+import Users from './components/Users.jsx';
+import Teams from './components/Teams.jsx';
+import Activities from './components/Activities.jsx';
+import Leaderboard from './components/Leaderboard.jsx';
+import Workouts from './components/Workouts.jsx';
 
-const logoUrl = new URL('../../docs/octofitapp-small.png', import.meta.url).href;
+const logoUrl = new URL('../../../docs/octofitapp-small.png', import.meta.url).href;
 
-const apiBaseUrl = import.meta.env.VITE_CODESPACE_NAME
-  ? `https://${import.meta.env.VITE_CODESPACE_NAME}-8000.app.github.dev`
+const codespaceName = import.meta.env.VITE_CODESPACE_NAME?.trim();
+if (codespaceName && !/^[a-z\d-]+$/i.test(codespaceName)) {
+  throw new Error('VITE_CODESPACE_NAME must contain only letters, numbers, or hyphens.');
+}
+
+const apiBaseUrl = codespaceName
+  ? `https://${codespaceName}-8000.app.github.dev`
   : 'http://localhost:8000';
 
 const navItems = [

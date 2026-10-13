@@ -1,31 +1,36 @@
 import { useEffect, useState } from 'react';
+import { extractCollection } from './collection.js';
 
 function Leaderboard({ apiBaseUrl }) {
   const [entries, setEntries] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const response = await fetch(`${apiBaseUrl}/api/leaderboard/`);
-        if (!response.ok) {
-          throw new Error('Unable to load leaderboard');
-        }
+    const controller = new AbortController();
 
-        const data = await response.json();
-        setEntries(Array.isArray(data.leaderboard) ? data.leaderboard : []);
+    async function fetchLeaderboard() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/leaderboard/`, { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error(`Unable to load leaderboard (HTTP ${response.status}).`);
+        }
+        setEntries(extractCollection(await response.json(), 'leaderboard'));
       } catch (loadError) {
-        setError(loadError.message);
+        if (!controller.signal.aborted) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load leaderboard.');
+        }
       }
-    };
+    }
 
     fetchLeaderboard();
+    return () => controller.abort();
   }, [apiBaseUrl]);
 
   return (
     <div className="container py-4">
       <h2 className="mb-3">Leaderboard</h2>
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
+      {!error && entries.length === 0 ? <p className="text-muted">No leaderboard entries found.</p> : null}
       <div className="list-group">
         {entries.map((entry) => (
           <div className="list-group-item d-flex justify-content-between align-items-center" key={entry._id ?? entry.rank}>
